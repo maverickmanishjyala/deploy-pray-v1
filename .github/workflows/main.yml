@@ -2,13 +2,29 @@ name: Send PR Data to Custom API
 
 on:
   pull_request:
-    types: [opened]   # triggers only when PR is created
+    types: [opened, synchronize, reopened]
 
 jobs:
   notify:
     runs-on: ubuntu-latest
 
     steps:
+      # ✅ Checkout full repo (needed for diff)
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0   # important for full diff
+
+      # ✅ Get changed files list
+      - name: Get changed files
+        id: files
+        run: |
+          git diff --name-only origin/${{ github.event.pull_request.base.ref }}...HEAD > files.txt
+          echo "FILES<<EOF" >> $GITHUB_OUTPUT
+          cat files.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      # ✅ Send enriched data
       - name: Send PR data to custom API
         run: |
           curl -X POST https://elixir-salutary-humbling.ngrok-free.dev/api/webhooks/github \
@@ -18,6 +34,16 @@ jobs:
             "repository": "${{ github.repository }}",
             "pr_number": "${{ github.event.pull_request.number }}",
             "title": "${{ github.event.pull_request.title }}",
+            "description": "${{ github.event.pull_request.body }}",
             "author": "${{ github.event.pull_request.user.login }}",
-            "url": "${{ github.event.pull_request.html_url }}"
+            "url": "${{ github.event.pull_request.html_url }}",
+
+            "base_branch": "${{ github.event.pull_request.base.ref }}",
+            "head_branch": "${{ github.event.pull_request.head.ref }}",
+            "commit_sha": "${{ github.event.pull_request.head.sha }}",
+
+            "diff_url": "${{ github.event.pull_request.diff_url }}",
+            "patch_url": "${{ github.event.pull_request.patch_url }}",
+
+            "changed_files": "${{ steps.files.outputs.FILES }}"
           }'
