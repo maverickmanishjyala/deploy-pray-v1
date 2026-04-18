@@ -11,7 +11,7 @@ jobs:
     steps:
       - name: Send PR data to custom API
         run: |
-          curl -X POST http://192.168.10.135:3000/api/webhooks/github \
+          curl -X POST https://elixir-salutary-humbling.ngrok-free.dev/api/webhooks/github \
           -H "Content-Type: application/json" \
           -d '{
             "action": "${{ github.event.action }}",
