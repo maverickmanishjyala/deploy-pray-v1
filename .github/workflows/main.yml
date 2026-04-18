@@ -24,16 +24,7 @@ jobs:
           cat files.txt >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-      # ✅ Get commit messages (optional but useful)
-      - name: Get commit messages
-        id: commits
-        run: |
-          git log origin/${{ github.event.pull_request.base.ref }}..HEAD --pretty=format:"%s" > commits.txt
-          echo "COMMITS<<EOF" >> $GITHUB_OUTPUT
-          cat commits.txt >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-      # ✅ Send enriched data
+      # ✅ Send enriched data (without commit messages)
       - name: Send PR data to custom API
         run: |
           curl -X POST https://elixir-salutary-humbling.ngrok-free.dev/api/webhooks/github \
@@ -102,6 +93,5 @@ jobs:
               }
             },
 
-            "files_changed": "${{ steps.files.outputs.FILES }}",
-            "commit_messages": "${{ steps.commits.outputs.COMMITS }}"
+            "files_changed": "${{ steps.files.outputs.FILES }}"
           }'
