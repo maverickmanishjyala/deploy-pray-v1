@@ -13,7 +13,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0   # important for full diff
+          fetch-depth: 0
 
       # ✅ Get changed files list
       - name: Get changed files
@@ -24,6 +24,15 @@ jobs:
           cat files.txt >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
+      # ✅ Get commit messages (optional but useful)
+      - name: Get commit messages
+        id: commits
+        run: |
+          git log origin/${{ github.event.pull_request.base.ref }}..HEAD --pretty=format:"%s" > commits.txt
+          echo "COMMITS<<EOF" >> $GITHUB_OUTPUT
+          cat commits.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       # ✅ Send enriched data
       - name: Send PR data to custom API
         run: |
@@ -31,19 +40,68 @@ jobs:
           -H "Content-Type: application/json" \
           -d '{
             "action": "${{ github.event.action }}",
+            "event_name": "${{ github.event_name }}",
+            "actor": "${{ github.actor }}",
+            "workflow": "${{ github.workflow }}",
+            "run_id": "${{ github.run_id }}",
+            "run_number": "${{ github.run_number }}",
+
             "repository": "${{ github.repository }}",
-            "pr_number": "${{ github.event.pull_request.number }}",
-            "title": "${{ github.event.pull_request.title }}",
-            "description": "${{ github.event.pull_request.body }}",
-            "author": "${{ github.event.pull_request.user.login }}",
-            "url": "${{ github.event.pull_request.html_url }}",
+            "repository_owner": "${{ github.repository_owner }}",
 
-            "base_branch": "${{ github.event.pull_request.base.ref }}",
-            "head_branch": "${{ github.event.pull_request.head.ref }}",
-            "commit_sha": "${{ github.event.pull_request.head.sha }}",
+            "pr": {
+              "id": "${{ github.event.pull_request.id }}",
+              "number": "${{ github.event.pull_request.number }}",
+              "title": "${{ github.event.pull_request.title }}",
+              "description": "${{ github.event.pull_request.body }}",
+              "state": "${{ github.event.pull_request.state }}",
+              "draft": "${{ github.event.pull_request.draft }}",
 
-            "diff_url": "${{ github.event.pull_request.diff_url }}",
-            "patch_url": "${{ github.event.pull_request.patch_url }}",
+              "created_at": "${{ github.event.pull_request.created_at }}",
+              "updated_at": "${{ github.event.pull_request.updated_at }}",
+              "closed_at": "${{ github.event.pull_request.closed_at }}",
+              "merged_at": "${{ github.event.pull_request.merged_at }}",
 
-            "changed_files": "${{ steps.files.outputs.FILES }}"
+              "url": "${{ github.event.pull_request.html_url }}",
+
+              "author": {
+                "login": "${{ github.event.pull_request.user.login }}",
+                "id": "${{ github.event.pull_request.user.id }}",
+                "type": "${{ github.event.pull_request.user.type }}",
+                "avatar_url": "${{ github.event.pull_request.user.avatar_url }}"
+              },
+
+              "branches": {
+                "base": "${{ github.event.pull_request.base.ref }}",
+                "head": "${{ github.event.pull_request.head.ref }}"
+              },
+
+              "commits_count": "${{ github.event.pull_request.commits }}",
+              "additions": "${{ github.event.pull_request.additions }}",
+              "deletions": "${{ github.event.pull_request.deletions }}",
+              "changed_files_count": "${{ github.event.pull_request.changed_files }}",
+
+              "commit_sha": "${{ github.event.pull_request.head.sha }}",
+              "merge_commit_sha": "${{ github.event.pull_request.merge_commit_sha }}",
+
+              "mergeable": "${{ github.event.pull_request.mergeable }}",
+              "mergeable_state": "${{ github.event.pull_request.mergeable_state }}",
+              "merged": "${{ github.event.pull_request.merged }}",
+              "rebaseable": "${{ github.event.pull_request.rebaseable }}",
+
+              "labels": ${{ toJson(github.event.pull_request.labels) }},
+              "assignees": ${{ toJson(github.event.pull_request.assignees) }},
+              "reviewers": ${{ toJson(github.event.pull_request.requested_reviewers) }},
+
+              "urls": {
+                "diff": "${{ github.event.pull_request.diff_url }}",
+                "patch": "${{ github.event.pull_request.patch_url }}",
+                "commits": "${{ github.event.pull_request.commits_url }}",
+                "comments": "${{ github.event.pull_request.comments_url }}",
+                "review_comments": "${{ github.event.pull_request.review_comments_url }}"
+              }
+            },
+
+            "files_changed": "${{ steps.files.outputs.FILES }}",
+            "commit_messages": "${{ steps.commits.outputs.COMMITS }}"
           }'
