@@ -1,0 +1,23 @@
+name: Send PR Data to Custom API
+
+on:
+  pull_request:
+    types: [opened]   # triggers only when PR is created
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send PR data to custom API
+        run: |
+          curl -X POST http://192.168.10.135:3000/api/webhooks/github \
+          -H "Content-Type: application/json" \
+          -d '{
+            "action": "${{ github.event.action }}",
+            "repository": "${{ github.repository }}",
+            "pr_number": "${{ github.event.pull_request.number }}",
+            "title": "${{ github.event.pull_request.title }}",
+            "author": "${{ github.event.pull_request.user.login }}",
+            "url": "${{ github.event.pull_request.html_url }}"
+          }'
